@@ -43,12 +43,12 @@ class CAPSNet(nn.Module):
     def ind2coord(self, ind, width):
         ind = ind.unsqueeze(-1)
         x = ind % width
-        y = ind // width
+        y = torch.div(ind, width, rounding_mode='floor')
         coord = torch.cat((x, y), -1).float()
         return coord
 
     def gen_grid(self, h_min, h_max, w_min, w_max, len_h, len_w):
-        x, y = torch.meshgrid([torch.linspace(w_min, w_max, len_w), torch.linspace(h_min, h_max, len_h)])
+        x, y = torch.meshgrid([torch.linspace(w_min, w_max, len_w), torch.linspace(h_min, h_max, len_h)], indexing="ij")
         grid = torch.stack((x, y), -1).transpose(0, 1).reshape(-1, 2).float().to(self.device)
         return grid
 
@@ -60,7 +60,7 @@ class CAPSNet(nn.Module):
         :param norm: if l2 normalize features
         :return: the extracted features, [batch_size, n_pts, n_dim]
         '''
-        feat = F.grid_sample(x, coord_n.unsqueeze(2)).squeeze(-1)
+        feat = F.grid_sample(x, coord_n.unsqueeze(2), align_corners=True).squeeze(-1)
         if norm:
             feat = F.normalize(feat)
         feat = feat.transpose(1, 2)
@@ -148,7 +148,7 @@ class CAPSNet(nn.Module):
 
         grid_n_ = grid_n.repeat(batch_size, 1, 1, 1)  # Bx1xhwx2
         coord2_n_grid = coord2_n.unsqueeze(-2) + grid_n_  # Bxnxhwx2
-        feat2_win = F.grid_sample(featmap2, coord2_n_grid, padding_mode='zeros').permute(0, 2, 3, 1)  # Bxnxhwxd
+        feat2_win = F.grid_sample(featmap2, coord2_n_grid, padding_mode='zeros', align_corners=True).permute(0, 2, 3, 1)  # Bxnxhwxd
 
         feat1 = feat1.unsqueeze(-2)
 
