@@ -49,7 +49,7 @@ class CAPSNet(nn.Module):
 
     def gen_grid(self, h_min, h_max, w_min, w_max, len_h, len_w):
         x, y = torch.meshgrid([torch.linspace(w_min, w_max, len_w), torch.linspace(h_min, h_max, len_h)], indexing="ij")
-        grid = torch.stack((x, y), -1).transpose(0, 1).reshape(-1, 2).float().to(self.device)
+        grid = torch.stack((x, y), -1).transpose(0, 1).reshape(-1, 2).float()
         return grid
 
     def sample_feat_by_coord(self, x, coord_n, norm=False):
@@ -121,7 +121,7 @@ class CAPSNet(nn.Module):
         featmap2_flatten = featmap2.reshape(B, d, h2*w2).transpose(1, 2)  # BX(hw)xd
         prob = self.compute_prob(feat1, featmap2_flatten)  # Bxnx(hw)
 
-        grid_n = grid_n.unsqueeze(0).unsqueeze(0)  # 1x1x(hw)x2
+        grid_n = grid_n.to(prob.device).unsqueeze(0).unsqueeze(0)  # 1x1x(hw)x2
         expected_coord_n = torch.sum(grid_n * prob.unsqueeze(-1), dim=2)  # Bxnx2
 
         if with_std:
@@ -146,7 +146,7 @@ class CAPSNet(nn.Module):
                                w_min=-self.args.window_size, w_max=self.args.window_size,
                                len_h=int(self.args.window_size*h2), len_w=int(self.args.window_size*w2))
 
-        grid_n_ = grid_n.repeat(batch_size, 1, 1, 1)  # Bx1xhwx2
+        grid_n_ = grid_n.to(coord2_n.device).repeat(batch_size, 1, 1, 1)  # Bx1xhwx2
         coord2_n_grid = coord2_n.unsqueeze(-2) + grid_n_  # Bxnxhwx2
         feat2_win = F.grid_sample(featmap2, coord2_n_grid, padding_mode='zeros', align_corners=True).permute(0, 2, 3, 1)  # Bxnxhwxd
 
